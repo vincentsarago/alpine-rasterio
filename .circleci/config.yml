@@ -1,0 +1,42 @@
+version: 2
+common: &common
+  machine:
+    docker_layer_caching: false 
+  working_directory: ~/alpine-rasterio
+  steps:
+    - checkout
+    - run: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+    - run:
+        name: create rio image
+        command: docker build -f dockerfiles/gdal${GDAL_VERSION}/Dockerfile -t remotepixel/alpine-rasterio:gdal${GDAL_VERSION} .
+    - run:
+        name: push image
+        command: |
+            if [[ "$CIRCLE_BRANCH" == "master" ]]; then
+              docker push remotepixel/alpine-rasterio:gdal${GDAL_VERSION}
+            fi
+
+jobs:
+  "gdal-master":
+    <<: *common
+    environment:
+      - GDAL_VERSION=master
+
+  "gdal-3.0":
+    <<: *common
+    environment:
+      - GDAL_VERSION=3.0
+
+  "gdal-2.4":
+    <<: *common
+    environment:
+      - GDAL_VERSION=2.4
+
+workflows:
+  version: 2
+  build_and_push:
+    jobs:
+      - "gdal-master"
+      - "gdal-3.0"
+      - "gdal-2.4"
+
